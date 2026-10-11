@@ -1,0 +1,5 @@
+# Matching library/firmware required. Installation does not flash hardware.
+libusb1==3.4.0
+libusb-package==1.0.30.0
+opendbc @ git+https://github.com/commaai/opendbc.git@229dc7062d8986b4f954c7c97875b4ffd0044d12
+pandacan @ git+https://github.com/commaai/panda.git@92eb565169fd553f4dfaf508c1a3f8dbc14fbfbf

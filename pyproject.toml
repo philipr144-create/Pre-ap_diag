@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "model-s-lab"
+version = "0.1.0"
+description = "Local diagnostic observatory for a 2013 Tesla Model S P85 pre-AP"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["fastapi>=0.115,<1", "uvicorn>=0.30,<1", "cantools>=40,<45"]
+
+[project.optional-dependencies]
+test = ["pytest>=8,<10", "httpx>=0.27,<1"]
+usb = ["libusb1>=3,<4"]
+
+[project.scripts]
+model-s-lab = "teslalab.server:main"
+
+[tool.setuptools]
+packages = ["teslalab"]
+include-package-data = false
+
+[tool.setuptools.package-data]
+teslalab = ["static/*", "references/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

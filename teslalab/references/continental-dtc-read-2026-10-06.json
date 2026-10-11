@@ -1,0 +1,90 @@
+{
+  "reset_available": true,
+  "available": false,
+  "speed_mph": 0.0,
+  "hold": null,
+  "stopping": false,
+  "manual": false,
+  "releasing": false,
+  "reason": "Waiting for Tesla Pre-AP safety mode",
+  "fault": "Factory restoration unconfirmed after reload; use Restore Factory Control",
+  "factory_restored": false,
+  "last_request": null,
+  "last_response": null,
+  "trace": [
+    {
+      "at": 14096.719044989,
+      "event": "rx",
+      "payload": "50 03 00 19 00 c8",
+      "pending": null
+    },
+    {
+      "at": 14096.889740357,
+      "event": "rx",
+      "payload": "50 01 00 19 00 c8",
+      "pending": null
+    }
+  ],
+  "dtc": {
+    "busy": false,
+    "result": {
+      "response": "59 02 ff 55 a1 00 08 55 62 98 08 55 a9 00 09 55 a3 00 08 55 a3 01 08",
+      "status_availability_mask": "FF",
+      "records": [
+        {
+          "code": "55A100",
+          "status": "08"
+        },
+        {
+          "code": "556298",
+          "status": "08"
+        },
+        {
+          "code": "55A900",
+          "status": "09"
+        },
+        {
+          "code": "55A300",
+          "status": "08"
+        },
+        {
+          "code": "55A301",
+          "status": "08"
+        }
+      ],
+      "cleared": false
+    },
+    "trace": [
+      {
+        "tx": "02 10 03 00 00 00 00 00"
+      },
+      {
+        "rx": "06 50 03 00 19 00 c8 30"
+      },
+      {
+        "tx": "03 19 02 ff 00 00 00 00"
+      },
+      {
+        "rx": "10 17 59 02 ff 55 a1 00"
+      },
+      {
+        "tx": "30 00 00 00 00 00 00 00"
+      },
+      {
+        "rx": "21 08 55 62 98 08 55 a9"
+      },
+      {
+        "rx": "22 00 09 55 a3 00 08 55"
+      },
+      {
+        "rx": "23 a3 01 08 a3 00 08 55"
+      },
+      {
+        "tx": "02 10 01 00 00 00 00 00"
+      },
+      {
+        "rx": "06 50 01 00 19 00 c8 55"
+      }
+    ]
+  }
+}

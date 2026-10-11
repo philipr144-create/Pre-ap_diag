@@ -1,0 +1,13 @@
+[
+  {
+    "key": "obd_candidate",
+    "name": "Conventional OBD candidate · NOT verified Tesla mapping",
+    "tx": 2016,
+    "rx": 2024,
+    "bus": 0,
+    "transport_verified": false,
+    "clear_verified": false,
+    "confidence": "UDS convention only; no vehicle-specific evidence",
+    "evidence": "not verified"
+  }
+]
