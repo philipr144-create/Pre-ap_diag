@@ -21,6 +21,7 @@ class Input(BaseModel):
 
 class Source(Input):
     mode: Literal["demo","panda","replay"]
+    interface: Literal["usb","spi"] = "usb"
     serial: str | None = Field(default=None,max_length=80)
     text: str | None = Field(default=None,max_length=24_000_000)
     speed: float = Field(default=1,ge=.1,le=20)

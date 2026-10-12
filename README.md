@@ -1,5 +1,13 @@
 # Model S Lab
 
+## Focused update: SPI, filters and public ECU leads
+
+The source picker now includes **local Comma SPI** alongside USB. SPI requires the server to run on the Linux Comma host, compatible Panda libraries, openpilot manager/pandad independently stopped, and an already silent/no-output device. It refuses process takeover, maintains an exclusive app lease, checks for competing processes, and uses the same guarded diagnostic path. This is not a Mac-to-Comma remote transport. No SPI hardware has been tested. USB behavior remains unchanged.
+
+Live signal filters now include bus, measurements/status/flags/counters/other types, and text search across message, signal, DBC and unit. Type grouping is derived from DBC metadata; counters/checksums use names. Every observed decoded signal remains available with filters cleared; all supplied definitions are searchable in Evidence library, and unknown raw frames remain recorded.
+
+See `PUBLIC-ECU-LEADS.md` for published TPMS `64F→65F` and battery-internal legacy BMS `602→612` leads. Neither is verified for this vehicle's diagnostic connector or mapped to a Panda bus; neither enables new writes. Earlier statements below excluding SPI apply to the original USB-only version and are superseded by this update.
+
 A local diagnostic and monitoring workspace for a **2013 Tesla Model S P85, pre-AP**. Python host server, responsive browser UI, standalone USB Panda capture, reference DBC decoding, replay, diagnostic inspection, persistent recordings and evidence reports.
 
 **Starts offline. No hardware was tested during development. No suspension, steering, pedal, brake, calibration, reset or programming actuation is enabled.** Manufacturer routines and session changes are inspectable as audited plans. Historical acknowledgments are not treated as proof that replaying them is safe.

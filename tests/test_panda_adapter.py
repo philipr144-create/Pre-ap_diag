@@ -2,7 +2,7 @@
 import sys
 import types
 import pytest
-from teslalab.transport import PandaUSB
+from teslalab.transport import PandaUSB, PandaSPI
 
 @pytest.fixture
 def panda_api(monkeypatch):
@@ -74,3 +74,25 @@ def test_transport_never_uses_alloutput_and_rejects_functional_broadcast(panda_a
     adapter.send(0x64b,0,bytes.fromhex("031902ff00000000"))
     assert all(c[1] in (0,3) for c in calls if c[0]=="mode")
     adapter.close()
+
+def test_spi_rejects_nonlinux_before_device_access(monkeypatch):
+    monkeypatch.setattr(sys,"platform","darwin")
+    with pytest.raises(ValueError,match="Linux Comma host"): PandaSPI()
+
+def test_spi_refuses_running_openpilot_before_device_access(monkeypatch):
+    monkeypatch.setattr(sys,"platform","linux")
+    def refuse(self):raise ValueError("pandad is running")
+    monkeypatch.setattr(PandaSPI,"require_exclusive",refuse)
+    with pytest.raises(ValueError,match="pandad"): PandaSPI()
+
+def test_spi_uses_explicit_connection_and_preserves_silent_shutdown(panda_api,monkeypatch):
+    panda,device,calls=panda_api
+    monkeypatch.setattr(sys,"platform","linux")
+    monkeypatch.setattr(PandaSPI,"require_exclusive",lambda self:None)
+    context=types.SimpleNamespace(close=lambda:calls.append(("spi_context_close",)))
+    handle=types.SimpleNamespace(close=lambda:calls.append(("spi_close",)))
+    monkeypatch.setattr(panda,"spi_connect",lambda serial:(context,handle,"SPI-TEST",False),raising=False)
+    adapter=PandaSPI()
+    assert adapter.serial=="SPI-TEST" and adapter.mode==0
+    adapter.close()
+    assert ("spi_close",) in calls and adapter.lease is None

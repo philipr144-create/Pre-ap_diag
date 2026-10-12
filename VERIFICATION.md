@@ -25,3 +25,7 @@ Live EAS clear and manufacturer routines remain disabled. Historical height/cali
 ## Non-failing test warning
 
 The installed Starlette test client emits a deprecation warning for its httpx adapter and suggests a future httpx2 migration. All tests pass. This affects the test harness; no browser runtime error was observed in the checked dashboard.
+
+## October 12 follow-up
+
+55 tests pass, including added SPI platform/ownership refusal and mocked explicit SPI lifecycle tests. Added USB/SPI source selection, bus/type/text signal filtering, and source-linked public TPMS/BMS address leads. SPI remains hardware-unverified; no new physical actuation is enabled.

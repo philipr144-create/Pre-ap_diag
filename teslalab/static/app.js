@@ -45,8 +45,8 @@ function renderState(){
   const keyNames=["DI_vehicleSpeed","DI_gear","DI_torqueDriver","DI_motorRPM"];
   $("overview-signals").innerHTML=state.signals.length?keyNames.map(name=>{const s=state.signals.find(s=>s.name===name);return `<div class="state-cell"><span class="overline">${esc(name.replace(/^DI_/,"").replace(/([A-Z])/g," $1"))}</span><strong>${s?esc(name==="DI_gear"?({0:"Invalid",1:"Park",2:"Reverse",3:"Neutral",4:"Drive",7:"SNA"}[s.value]||s.value):fmt(s.value)):"—"} <small>${s?esc(s.unit):""}</small></strong><small>${s?esc(s.source)+" · "+s.age.toFixed(1)+"s old":"Not observed"}</small></div>`;}).join(""):'<p class="empty">No data yet. Start a demo, replay, or passive capture.</p>';
   if(currentPage==="monitor"){
-    const query=$("signal-search").value.toLowerCase();
-    $("signal-table").innerHTML=state.signals.filter(s=>`${s.name} ${s.message} ${s.bus}`.toLowerCase().includes(query)).map(s=>`<tr><td><strong>${esc(s.name)}</strong></td><td>${esc(s.message)}<small>Bus ${s.bus} · ${esc(s.dbc)}</small></td><td><code>${esc(fmt(s.value))}</code> ${esc(s.unit)}</td><td>${s.age.toFixed(1)}s<small>${esc(s.source)}${s.age>1?" · STALE":""}</small></td></tr>`).join("") || '<tr><td colspan="4" class="empty">No matching decoded signals</td></tr>';
+    const query=$("signal-search").value.toLowerCase(),busFilter=$("signal-bus").value,typeFilter=$("signal-type").value;
+    $("signal-table").innerHTML=state.signals.filter(s=>`${s.name} ${s.message} ${s.bus} ${s.dbc} ${s.unit}`.toLowerCase().includes(query)&&(!busFilter||String(s.bus)===busFilter)&&(!typeFilter||signalType(s)===typeFilter)).map(s=>`<tr><td><strong>${esc(s.name)}</strong></td><td>${esc(s.message)}<small>Bus ${s.bus} · ${esc(s.dbc)}</small></td><td><code>${esc(fmt(s.value))}</code> ${esc(s.unit)}</td><td>${s.age.toFixed(1)}s<small>${esc(s.source)}${s.age>1?" · STALE":""}</small></td></tr>`).join("") || '<tr><td colspan="4" class="empty">No matching decoded signals</td></tr>';
     const rawQuery=$("raw-search").value.toLowerCase().replace(/^0x/,"");
     $("raw-table").innerHTML=state.raw.slice().reverse().filter(f=>f.address.toString(16).includes(rawQuery)).map(f=>`<tr><td>${timeText(f.ts)}</td><td>${f.bus}</td><td>0x${f.address.toString(16).toUpperCase()}</td><td>${f.data.match(/../g)?.join(" ")||""}</td><td>${esc(f.direction)} / ${esc(f.source)}</td></tr>`).join("");
     const optionsKey=state.signals.map(s=>s.key).join("|");
@@ -66,6 +66,7 @@ function renderState(){
     ["Transport quarantine",!state.quarantined,state.quarantined?"Reconnect required":"Clear"]
   ].map(([name,ok,value])=>`<div class="interlock"><span>${esc(name)}</span><b class="${ok?"ok":""}">${esc(value)}</b></div>`).join("");
 }
+function signalType(s){if(/counter|checksum|crc/i.test(s.name))return "counter";const message=catalog.dbcs[s.dbc]?.find(m=>m.name===s.message),def=message?.signals.find(d=>d.name===s.name);if(def&&(def.length===1||Object.keys(def.choices||{}).length))return "status";return s.unit?"measurement":"other";}
 function renderDTCs(){
   const entries=Object.entries(state.dtcs);
   $("dtc-results").className=entries.length?"":"empty";
@@ -95,7 +96,7 @@ function drawChart(rows){
   $("chart-range").textContent=`${Math.min(...points.map(p=>p[1])).toFixed(2)} — ${Math.max(...points.map(p=>p[1])).toFixed(2)}`;
 }
 async function refresh(){state=await api("state");renderState();}
-async function startSource(mode){let body={mode};if(mode==="panda")body.serial=$("serial").value||null;if(mode==="replay"){const file=$("replay-file").files[0];if(!file)throw Error("Choose a JSONL or candump recording first");if(file.size>24_000_000)throw Error("Recording exceeds 24 MB; split it before importing");body.text=await file.text();body.speed=Number($("replay-speed").value);}await api("source",body);signalOptions="";selectedSignal="";await refresh();toast(mode==="demo"?"Synthetic demo started. No CAN hardware is connected.":"Acquisition started; raw frames are recorded automatically.");}
+async function startSource(mode){let body={mode:mode==="panda-spi"?"panda":mode,interface:mode==="panda-spi"?"spi":"usb"};if(mode==="panda"||mode==="panda-spi")body.serial=$("serial").value||null;if(mode==="replay"){const file=$("replay-file").files[0];if(!file)throw Error("Choose a JSONL or candump recording first");if(file.size>24_000_000)throw Error("Recording exceeds 24 MB; split it before importing");body.text=await file.text();body.speed=Number($("replay-speed").value);}await api("source",body);signalOptions="";selectedSignal="";await refresh();toast(mode==="demo"?"Synthetic demo started. No CAN hardware is connected.":"Acquisition started; raw frames are recorded automatically.");}
 bind("demo-start",()=>startSource("demo"));bind("connect",()=>startSource($("source").value));
 bind("stop",async()=>{await api("stop",{});await refresh();toast("Acquisition stopped and diagnostic access disarmed.");});
 bind("devices",async()=>print("device-result",await api("devices")));
@@ -105,7 +106,7 @@ bind("replay-pause",async()=>{await api("replay",{paused:!state.replay.paused});
 $("replay-speed").addEventListener("change",()=>{if(state?.mode==="replay")api("replay",{speed:Number($("replay-speed").value)}).catch(e=>toast(e.message,true));});
 $("replay-seek").addEventListener("change",()=>api("replay",{index:Number($("replay-seek").value),paused:true}).then(refresh).catch(e=>toast(e.message,true)));
 $("graph-signal").addEventListener("change",()=>{selectedSignal=$("graph-signal").value;updateChart().catch(e=>toast(e.message,true));});
-["signal-search","raw-search"].forEach(id=>$(id).addEventListener("input",()=>state&&renderState()));
+["signal-search","raw-search","signal-bus","signal-type"].forEach(id=>$(id).addEventListener("input",()=>state&&renderState()));
 bind("scan",async()=>{const keys=[...document.querySelectorAll("[data-ecu]:checked")].map(x=>x.dataset.ecu);print("scan-result",await api("discover",{keys,dry_run:$("scan-dry").checked}));await refresh();});
 bind("add-ecu",async()=>{const tx=parseInt($("ecu-tx").value.replace(/^0x/i,""),16),rx=parseInt($("ecu-rx").value.replace(/^0x/i,""),16);if(!Number.isFinite(tx)||!Number.isFinite(rx))throw Error("Enter request and response CAN IDs in hex");await api("profiles",{key:$("ecu-key").value,name:$("ecu-name").value,tx,rx,bus:Number($("ecu-bus").value)});await loadCatalog();toast("Candidate added. Live transmit remains disabled.");});
 async function readDTC(ecu){const result=await api("diagnostic",{ecu,action:"read_dtc",dry_run:false});await refresh();toast(`${result.source.toUpperCase()}: DTC response preserved. ${result.records.length} records.`);}

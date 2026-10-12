@@ -170,3 +170,60 @@ class PandaUSB:
                 if self.p.health()["safety_mode"] != 0: raise ValueError("Final silent mode unconfirmed")
             finally:
                 self.p.close(); self.p = None
+
+class PandaSPI(PandaUSB):
+    """Explicit local Linux SPI ownership; never suspend/resume openpilot."""
+    def __init__(self, serial=None):
+        import sys
+        from pathlib import Path
+        if not sys.platform.startswith("linux"):
+            raise ValueError("SPI requires running this server locally on the Linux Comma host; use USB on this computer")
+        import fcntl
+        self.lease = open("/tmp/model-s-lab-spi.lock","a+")
+        try: fcntl.flock(self.lease,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        except OSError:
+            self.lease.close(); raise ValueError("Another Model S Lab instance owns SPI")
+        self.p=None; self.initial=None
+        try:
+            self.require_exclusive()
+            from panda import Panda
+            from panda.python import unpack_can_buffer
+            self.lock=__import__("threading").RLock()
+            self.mode=0;self.health={};self.buffer=b"";self.unpack=unpack_can_buffer
+            context,handle,actual,bootstub=Panda.spi_connect(serial)
+            if handle is None: raise ValueError("SPI Panda unavailable")
+            p=Panda.__new__(Panda)
+            p._context=context;p._handle=handle;p._handle_open=True
+            p._disable_checks=False;p.can_rx_overflow_buffer=b"";p.bootstub=bootstub
+            p._serial=p._connect_serial=actual
+            try:
+                if bootstub: raise ValueError("SPI bootstub; flashing is not supported")
+                p.health_version,p.can_version=p.get_packets_versions()[:2]
+                if p.can_version!=p.CAN_PACKET_VERSION: raise ValueError("SPI CAN packet version mismatch")
+                h=p.health()
+                if h["controls_allowed"] or h["safety_mode"] not in (0,19):
+                    raise ValueError("SPI must already be silent/no-output; stop openpilot independently first")
+                self.initial=h;self.serial=actual;self.firmware=p.get_version()
+            except BaseException:
+                p.close();raise
+            self.p=p;self.set_mode(False)
+        except BaseException:
+            self.close();raise
+
+    def require_exclusive(self):
+        from pathlib import Path
+        for path in Path("/proc").glob("[0-9]*/comm"):
+            try: name=path.read_text().strip()
+            except FileNotFoundError: continue
+            except PermissionError: raise ValueError("Cannot verify SPI process ownership")
+            if name in ("pandad","manager","manager.py"):
+                raise ValueError("Openpilot manager/pandad is running; SPI takeover refused. Stop it independently before connecting.")
+
+    def check(self):
+        self.require_exclusive()
+        return super().check()
+
+    def close(self):
+        try: super().close()
+        finally:
+            if getattr(self,"lease",None): self.lease.close();self.lease=None

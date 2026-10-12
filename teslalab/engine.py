@@ -9,7 +9,7 @@ from .catalog import EAS, ROUTINES, DIDS, BLOCKED, manifest, reference_builders
 from .decoder import Decoder
 from .safety import Guard, Denied, Confirmations
 from .store import Store
-from .transport import Frame, PandaUSB, parse_recording, usb_inventory
+from .transport import Frame, PandaUSB, PandaSPI, parse_recording, usb_inventory
 from .uds import DemoECU, IsoTP, decode_dtcs, make_request, NegativeResponse
 
 class Lab:
@@ -145,13 +145,14 @@ class Lab:
             self.guard.reset(); self.confirm.reset(); self.active_queue = None; self.active_profile = None
             if error: self.fault = error; raise Denied("Panda final silent mode unconfirmed: " + error)
 
-    def start(self, mode, serial=None, text=None, speed=1):
+    def start(self, mode, serial=None, text=None, speed=1, interface="usb"):
         with self.control:
             if mode not in ("demo", "panda", "replay"): raise ValueError("Unknown source")
+            if interface not in ("usb","spi"): raise ValueError("Unknown Panda interface")
             if not .1 <= speed <= 20: raise ValueError("Replay speed must be 0.1–20")
             frames, skipped = parse_recording(text) if mode == "replay" else ([],0)
             self.stop()
-            device = PandaUSB(serial) if mode == "panda" else None
+            device = (PandaSPI(serial) if interface == "spi" else PandaUSB(serial)) if mode == "panda" else None
             with self.lock:
                 self.device = device; self.decoder.reset(); self.raw.clear(); self.guard.reset()
                 self.mode = mode; self.fault = None; self.quarantined = False; self.count = 0
